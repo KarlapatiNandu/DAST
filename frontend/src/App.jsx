@@ -59,6 +59,10 @@ function App() {
   const [loginLoading, setLoginLoading] = useState(false)
   const [loginError, setLoginError] = useState(null)
 
+  // ── XSS GREETER STATE ────────────────────────────────────
+  const [greetName, setGreetName] = useState('')
+  const [greetUrl, setGreetUrl] = useState(null)  // URL loaded in iframe
+
   // ── API CALL: SEARCH ─────────────────────────────────────
   /**
    * handleSearch: called when the user clicks the Search button.
@@ -194,6 +198,27 @@ function App() {
     if (e.key === 'Enter') handleLogin()
   }
 
+  // ── GREETER: build the URL and load it in an iframe ──────
+  /**
+   * handleGreet: Constructs the /api/greet URL with the user's
+   * name and sets it as the iframe src. The iframe loads the raw
+   * HTML from the backend, so any XSS payload in the name will
+   * execute inside the iframe.
+   *
+   * This is how Reflected XSS works in the real world:
+   * an attacker crafts a malicious URL and tricks a victim into
+   * clicking it. The server reflects the payload back in the HTML.
+   */
+  const handleGreet = useCallback(() => {
+    if (!greetName.trim()) return
+    const url = `${API_BASE_URL}/api/greet?name=${encodeURIComponent(greetName)}`
+    setGreetUrl(url)
+  }, [greetName])
+
+  const handleGreetKeyDown = (e) => {
+    if (e.key === 'Enter') handleGreet()
+  }
+
   // ── RENDER ───────────────────────────────────────────────
   // JSX: JavaScript XML — looks like HTML but it's actually JavaScript.
   // Each JSX element compiles to React.createElement() under the hood.
@@ -227,6 +252,15 @@ function App() {
           onClick={() => setActiveTab('login')}
         >
           🔓 Login (SQL Injection)
+        </button>
+        <button
+          id="tab-xss"
+          className={`tab-btn ${activeTab === 'xss' ? 'active' : ''}`}
+          role="tab"
+          aria-selected={activeTab === 'xss'}
+          onClick={() => setActiveTab('xss')}
+        >
+          💉 Greeter (Reflected XSS)
         </button>
       </nav>
 
@@ -409,6 +443,79 @@ function App() {
                 </div>
               )}
             </>
+          )}
+        </main>
+      )}
+
+      {/* ── XSS GREETER PANEL ──────────────────────────────── */}
+      {activeTab === 'xss' && (
+        <main className="xss-card" role="tabpanel" aria-labelledby="tab-xss">
+
+          {/* Vulnerability badge */}
+          <div>
+            <span className="vuln-badge xss-vuln-badge">Reflected XSS — CWE-79 — OWASP A03</span>
+            <p className="login-heading">Vulnerable Greeting Page</p>
+            <p className="login-description">
+              The backend returns an <strong>HTML page</strong> with your name embedded
+              directly — no escaping, no sanitization. If you include a
+              <code>&lt;script&gt;</code> tag, the browser executes it.
+            </p>
+          </div>
+
+          {/* XSS tip */}
+          <div className="inject-tip">
+            💉 <strong>Try the XSS payload</strong> in the Name field:{' '}
+            <code>&lt;script&gt;alert('XSS')&lt;/script&gt;</code><br />
+            Or try: <code>&lt;img src=x onerror=alert('XSS')&gt;</code><br />
+            The backend embeds it raw into the HTML response — the script executes!
+          </div>
+
+          {/* Greeter form */}
+          <div className="login-fields">
+            <div>
+              <label htmlFor="greet-name" className="field-label">Your Name</label>
+              <input
+                id="greet-name"
+                type="text"
+                className="login-input"
+                placeholder="e.g.  John  or  <script>alert('XSS')</script>"
+                value={greetName}
+                onChange={(e) => setGreetName(e.target.value)}
+                onKeyDown={handleGreetKeyDown}
+                autoComplete="off"
+              />
+            </div>
+
+            <button
+              id="greet-button"
+              className="xss-button"
+              onClick={handleGreet}
+              disabled={!greetName.trim()}
+            >
+              Greet Me
+            </button>
+          </div>
+
+          {/* Show the constructed URL */}
+          {greetUrl && (
+            <div className="query-display">
+              <div className="query-display-label">⚠️ Request URL (contains your payload)</div>
+              <div className="query-text">{greetUrl}</div>
+            </div>
+          )}
+
+          {/* Render the vulnerable HTML response in an iframe */}
+          {greetUrl && (
+            <div className="xss-iframe-wrapper">
+              <div className="xss-iframe-label">🌐 Backend HTML Response (rendered live)</div>
+              <iframe
+                id="xss-iframe"
+                className="xss-iframe"
+                src={greetUrl}
+                title="Vulnerable greeting page"
+                sandbox="allow-scripts"
+              />
+            </div>
           )}
         </main>
       )}

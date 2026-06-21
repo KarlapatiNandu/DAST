@@ -1,7 +1,13 @@
 package com.dast.demo.controller;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -23,11 +29,24 @@ import java.util.Map;
  * their own SQL logic — bypassing authentication, reading
  * arbitrary data, or even dropping tables.
  *
+ * ── Previous Version vs This Version ──────────────────────
+ * The old version "simulated" SQL — it built the query string
+ * but never executed it. ZAP couldn't detect it because:
+ *   - No SQL error messages when injecting bad syntax
+ *   - No behavioral differences (boolean-based)
+ *   - No timing differences
+ *
+ * THIS version uses a REAL H2 database with REAL JDBC calls.
+ * When ZAP injects a single quote ('), H2 throws a real
+ * SQL syntax error, and ZAP recognizes the error message
+ * → confirmed SQL injection.
+ *
  * ── How to exploit this endpoint ─────────────────────────
  * Normal request:
  *   username = admin
- *   password = secret
- *   → Query: SELECT * FROM users WHERE username='admin' AND password='secret'
+ *   password = password123
+ *   → Query: SELECT * FROM users WHERE username='admin' AND password='password123'
+ *   → Returns 1 row → login success
  *
  * Injection attack:
  *   username = admin' --
@@ -36,19 +55,19 @@ import java.util.Map;
  *             ↑ The -- comments out the password check entirely!
  *             An attacker logs in as 'admin' with any (or no) password.
  *
- * ── Why ZAP Finds This ───────────────────────────────────
- * ZAP's Active Scanner injects SQL metacharacters (', --, OR 1=1, etc.)
- * and looks for:
- *   - Different response bodies depending on the payload
- *   - Error messages containing SQL keywords
- *   - Boolean-based differences (true vs false conditions)
+ * Another injection (bypass without knowing a username):
+ *   username = ' OR '1'='1
+ *   password = ' OR '1'='1
+ *   → Query: SELECT * FROM users WHERE username='' OR '1'='1' AND password='' OR '1'='1'
+ *   → Returns ALL rows → login success
  *
- * IMPORTANT: ZAP only fuzzes parameters it can see — URL query params
- * and form-encoded fields. JSON bodies (@RequestBody) are NOT auto-fuzzed.
- * This endpoint uses @RequestParam (form fields) so ZAP detects the SQLi.
- *
- * This endpoint exposes the constructed query in the response,
- * making the injection trivially visible.
+ * ── Why ZAP Now Finds This ────────────────────────────────
+ * ZAP's Active Scanner injects SQL metacharacters and detects:
+ *   1. ERROR-BASED: Injecting ' causes H2 to throw a real
+ *      JdbcSQLSyntaxErrorException. ZAP sees SQL keywords
+ *      in the error response → confirmed SQLi.
+ *   2. BOOLEAN-BASED: ZAP sends OR 1=1 (returns rows) vs
+ *      OR 1=2 (returns nothing). Different responses = SQLi.
  *
  * ── The Secure Fix ───────────────────────────────────────
  * Use PreparedStatement (parameterized queries):
@@ -65,12 +84,12 @@ import java.util.Map;
 // ^^ CORS wildcard: intentionally permissive for this DAST demo
 public class LoginController {
 
-    // ── Hardcoded credentials (simulated "database") ──────
-    // In a real app these would be in a database with hashed passwords.
-    // Hardcoding credentials is itself a vulnerability (CWE-798),
-    // but here it just gives us a known valid login to test with.
-    private static final String VALID_USER = "admin";
-    private static final String VALID_PASS = "password123";
+    // ── DataSource is auto-configured by Spring Boot ──────
+    // Spring sees H2 on the classpath + our application.properties
+    // and automatically creates a DataSource bean pointing to
+    // our in-memory H2 database.
+    @Autowired
+    private DataSource dataSource;
 
     /**
      * POST /api/login
@@ -80,14 +99,13 @@ public class LoginController {
      *
      * ⚠️  INTENTIONALLY VULNERABLE — DO NOT USE IN PRODUCTION ⚠️
      *
-     * Using @RequestParam (form fields) instead of @RequestBody (JSON)
-     * is essential for ZAP detection. ZAP's active scanner automatically
-     * fuzzes URL parameters and form fields — it does NOT fuzz JSON bodies
-     * by default. This makes the SQLi visible to ZAP's scanner.
+     * This endpoint executes a REAL SQL query against an H2 database
+     * using string concatenation (Statement, NOT PreparedStatement).
+     * This makes it vulnerable to SQL injection that ZAP can detect.
      *
      * @param username  from the form field "username"
      * @param password  from the form field "password"
-     * @return          a JSON map with: success, message, query (for demo)
+     * @return          a JSON map with: success, message, query
      */
     @PostMapping("/login")
     public Map<String, Object> login(
@@ -100,33 +118,59 @@ public class LoginController {
         // ══════════════════════════════════════════════════════
         // ⚠️  VULNERABILITY: String concatenation into SQL query
         //
-        // A real app would execute this against a database.
-        // Here we simulate it — the query is constructed exactly
-        // as a vulnerable JDBC/ODBC call would build it.
+        // We use Statement (not PreparedStatement) and concatenate
+        // user input directly into the SQL string.
         //
-        // If username = admin' --
-        // the query becomes:
-        //   SELECT * FROM users WHERE username='admin' --' AND password='...'
-        // which bypasses the password check entirely.
+        // When ZAP sends: username = admin'
+        // The query becomes:
+        //   SELECT * FROM users WHERE username='admin'' AND password=''
+        // H2 throws: JdbcSQLSyntaxErrorException
+        // ZAP sees "Syntax error" in the response → confirmed SQLi!
         // ══════════════════════════════════════════════════════
-        String simulatedQuery =
-            "SELECT * FROM users WHERE username='" + username +
-            "' AND password='" + password + "'";
+        String sql = "SELECT * FROM users WHERE username='" + username
+                   + "' AND password='" + password + "'";
 
-        // Simulate auth: check against our hardcoded "database"
-        boolean isAuthenticated =
-            VALID_USER.equals(username) && VALID_PASS.equals(password);
-
-        // Build response map (Jackson will convert this to JSON)
         Map<String, Object> response = new HashMap<>();
-        response.put("success", isAuthenticated);
-        response.put("message", isAuthenticated
-                ? "Login successful! Welcome, " + username + "."
-                : "Login failed. Invalid credentials.");
-        // ⚠️  Exposing the query in the response is an additional
-        //     vulnerability (information disclosure) — intentional here
-        //     so you can see exactly what gets injected.
-        response.put("query", simulatedQuery);
+        response.put("query", sql);  // Show the query (info disclosure — intentional)
+
+        try (Connection conn = dataSource.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            // ↑ This ACTUALLY EXECUTES the SQL against H2!
+            // If the query is malformed (injection), H2 throws an exception.
+            // If the injection is valid SQL (e.g., OR 1=1), it returns rows.
+
+            if (rs.next()) {
+                // At least one row matched → "authenticated"
+                String foundUser = rs.getString("username");
+                String foundRole = rs.getString("role");
+                response.put("success", true);
+                response.put("message", "Login successful! Welcome, " + foundUser
+                           + " (role: " + foundRole + ").");
+            } else {
+                // No rows matched
+                response.put("success", false);
+                response.put("message", "Login failed. Invalid credentials.");
+            }
+
+        } catch (SQLException e) {
+            // ══════════════════════════════════════════════════
+            // ⚠️  VULNERABILITY: Exposing SQL error messages
+            //
+            // Returning the raw SQL exception message to the client
+            // is an information disclosure vulnerability (CWE-209).
+            // ZAP uses these error messages to CONFIRM SQL injection:
+            //   - "Syntax error in SQL statement"
+            //   - "Column ... not found"
+            //   - H2-specific error codes
+            //
+            // In production, NEVER expose database errors to users.
+            // Return a generic "Something went wrong" instead.
+            // ══════════════════════════════════════════════════
+            response.put("success", false);
+            response.put("message", "SQL Error: " + e.getMessage());
+            response.put("errorClass", e.getClass().getSimpleName());
+        }
 
         return response;
     }
