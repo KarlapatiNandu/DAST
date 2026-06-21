@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        SPRING BOOT PARENT:
+        This inherits default configurations from Spring Boot,
+        like Java version, plugin versions, and dependency management.
+        You don't need to specify versions for most Spring Boot deps —
+        the parent handles that for you.
+    -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.2.5</version>
+        <relativePath/>
+    </parent>
+
+    <!-- Your project's unique identity -->
+    <groupId>com.dast.demo</groupId>
+    <artifactId>search-backend</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>search-backend</name>
+    <description>Simple Spring Boot backend for DAST learning</description>
+
+    <properties>
+        <!-- Use Java 17, the current LTS version -->
+        <java.version>17</java.version>
+    </properties>
+
+    <dependencies>
+        <!--
+            SPRING BOOT STARTER WEB:
+            This single dependency pulls in everything you need for a REST API:
+            - Embedded Tomcat server (so you don't need a separate web server)
+            - Spring MVC (for @RestController, @GetMapping, etc.)
+            - Jackson (for automatic JSON serialization/deserialization)
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- For writing unit tests (included by default, not used yet) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!--
+                SPRING BOOT MAVEN PLUGIN:
+                Lets you run `mvn spring-boot:run` to start the server.
+                Also packages the app as a single runnable JAR.
+            -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
