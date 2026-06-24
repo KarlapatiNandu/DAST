@@ -30,7 +30,7 @@ Thumbs.db
 *~
 
 # ##############################################################################
-# Backend (Spring Boot / Java / Maven)
+# Backend (Spring Boot / Java / Maven — kept for reference)
 # ##############################################################################
 backend/target/
 backend/pom.xml.tag
@@ -42,6 +42,14 @@ backend/dependency-reduced-pom.xml
 backend/buildNumber.properties
 backend/.mvn/timing.properties
 backend/.mvn/wrapper/.maven-wrapper.properties
+
+# ##############################################################################
+# Backend (Spring Boot / Java / Gradle — added in Stage 2)
+# ##############################################################################
+# build/ is Gradle's output directory (equivalent of Maven's target/)
+backend/build/
+# .gradle/ stores Gradle's local cache (task history, file hashes, etc.)
+backend/.gradle/
 
 # Crash dumps
 clear_dump.directory

@@ -1,0 +1,274 @@
+// =============================================================================
+// BUILD.GRADLE — Build Configuration for the DAST Learning Lab Backend
+// =============================================================================
+//
+// This file replaces pom.xml as the build configuration for the project.
+// It defines plugins, project identity, dependencies, and build tasks.
+//
+// MAVEN EQUIVALENT:
+//   pom.xml had everything in one file: <parent>, <groupId>, <dependencies>,
+//   <build><plugins>. This build.gradle does the same thing but in Gradle's
+//   Groovy-based DSL (Domain-Specific Language).
+//
+// HOW TO READ THIS FILE:
+//   Each section has a comment showing the Maven XML it replaces.
+// =============================================================================
+
+
+// =============================================================================
+// PLUGINS — These extend Gradle with extra capabilities
+// =============================================================================
+// In Maven, plugins go inside <build><plugins>. In Gradle, they go here.
+//
+// The Spring Boot parent POM in Maven (<parent>spring-boot-starter-parent</parent>)
+// is replaced by TWO Gradle plugins working together:
+//   1. 'org.springframework.boot' → replaces the spring-boot-maven-plugin
+//   2. 'io.spring.dependency-management' → replaces the BOM (Bill of Materials)
+//      version management from the parent POM
+plugins {
+    // ── Plugin 1: java ──────────────────────────────────────────────────────
+    // Adds standard Java compilation tasks: compileJava, test, jar, etc.
+    // Maven equivalent: This is implicit — Maven is Java-first by default.
+    // Gradle is language-agnostic, so you explicitly tell it "this is a Java project."
+    id 'java'
+
+    // ── Plugin 2: org.springframework.boot ──────────────────────────────────
+    // This is the Gradle equivalent of BOTH:
+    //   1. <parent>spring-boot-starter-parent:3.2.5</parent>  (version defaults)
+    //   2. <plugin>spring-boot-maven-plugin</plugin>          (bootRun, bootJar tasks)
+    //
+    // What it gives us:
+    //   - `gradlew.bat bootRun`  → same as `mvn spring-boot:run`
+    //   - `gradlew.bat bootJar` → creates executable JAR (same as `mvn package`)
+    //   - Automatically configures the main class detection
+    //
+    // Version 3.2.5 must match the Spring Boot version from pom.xml <parent>.
+    id 'org.springframework.boot' version '3.2.5'
+
+    // ── Plugin 3: io.spring.dependency-management ───────────────────────────
+    // This is the Gradle equivalent of the BOM (Bill of Materials) that
+    // spring-boot-starter-parent provides in Maven.
+    //
+    // WHY WE NEED THIS:
+    //   In Maven, when you write <dependency>spring-boot-starter-web</dependency>
+    //   WITHOUT a <version> tag, the parent POM automatically provides the right
+    //   version. That "magic" is called dependency management via BOM.
+    //
+    //   Gradle doesn't have a parent POM concept. Instead, this plugin imports
+    //   the Spring Boot BOM so we can omit version numbers on Spring dependencies
+    //   — just like in Maven.
+    //
+    //   Without this plugin, you'd need to write:
+    //     implementation 'org.springframework.boot:spring-boot-starter-web:3.2.5'
+    //   With this plugin, you just write:
+    //     implementation 'org.springframework.boot:spring-boot-starter-web'
+    id 'io.spring.dependency-management' version '1.1.4'
+}
+
+
+// =============================================================================
+// PROJECT IDENTITY — Who is this project?
+// =============================================================================
+// Maven equivalent of <groupId>, <version>, and <properties><java.version>
+
+// group = the namespace for your project artifacts
+// Maven equivalent: <groupId>com.dast.demo</groupId>
+group = 'com.dast.demo'
+
+// version = the current version of the project
+// Maven equivalent: <version>0.0.1-SNAPSHOT</version>
+// -SNAPSHOT means "this is a development build, not a final release"
+version = '0.0.1-SNAPSHOT'
+
+// Java toolchain = the Java version to compile against
+// Maven equivalent: <properties><java.version>17</java.version></properties>
+// In Maven, java.version sets both source and target compatibility via the parent POM.
+// In Gradle, we use the Java toolchain API to specify the JDK version.
+//
+// ORIGINAL POM.XML HAD: <java.version>17</java.version>
+//   This means "minimum Java 17" — NOT "must be exactly Java 17."
+//   Java is backward-compatible, so Java 24 can compile and run Java 17 code.
+//   Spring Boot 3.2.5 requires Java 17+, and Java 24 satisfies that requirement.
+//
+// WHY 24 INSTEAD OF 17?
+//   The toolchain API tells Gradle: "find a JDK with this EXACT major version."
+//   If you set languageVersion = 17 but only have JDK 24 installed, Gradle fails:
+//     "Cannot find a Java installation matching: {languageVersion=17}"
+//   Since this machine has Java 24, we set it to 24.
+//
+// WHY TOOLCHAIN INSTEAD OF sourceCompatibility?
+//   The older approach was: sourceCompatibility = '17'
+//   Gradle 9.x removed that top-level property. The toolchain API is the
+//   modern replacement that works across Gradle 8.x and 9.x.
+//   It also ensures the CORRECT JDK is used for compilation, testing, and running.
+java {
+    toolchain {
+        // This tells Gradle: "compile this project with Java 24"
+        // Change this number to match YOUR installed JDK version.
+        // Run `java -version` to check which version you have.
+        languageVersion = JavaLanguageVersion.of(24)
+    }
+}
+
+
+// =============================================================================
+// REPOSITORIES — Where does Gradle download dependencies from?
+// =============================================================================
+// Maven equivalent: (implicit — Maven Central is the default in Maven)
+//
+// KEY DIFFERENCE FROM MAVEN:
+//   In Maven, Maven Central is the default repository — you don't declare it.
+//   In Gradle, you MUST explicitly declare repositories.
+//   If you forget this block, Gradle will say:
+//     "Cannot resolve dependency org.springframework.boot:spring-boot-starter-web"
+repositories {
+    // mavenCentral() points to https://repo.maven.apache.org/maven2/
+    // This is the world's largest public repository of Java libraries.
+    // Both Maven and Gradle use the same repository — the libraries are the same,
+    // only the build tool configuration format is different.
+    mavenCentral()
+}
+
+
+// =============================================================================
+// DEPENDENCIES — What libraries does this project need?
+// =============================================================================
+// Maven equivalent: the <dependencies> section in pom.xml
+//
+// SCOPE MAPPING (Maven → Gradle):
+//   Maven <scope>       Gradle configuration      When available
+//   ─────────────────   ──────────────────────     ──────────────
+//   compile (default)   implementation             compile + runtime
+//   runtime             runtimeOnly                runtime only
+//   test                testImplementation         test compile + test runtime
+//   provided            compileOnly                compile only (container provides at runtime)
+dependencies {
+
+    // ── Dependency 1: spring-boot-starter-web ───────────────────────────────
+    // Maven equivalent:
+    //   <dependency>
+    //       <groupId>org.springframework.boot</groupId>
+    //       <artifactId>spring-boot-starter-web</artifactId>
+    //   </dependency>
+    //
+    // No <scope> in Maven = compile scope = Gradle's 'implementation'
+    //
+    // What this single dependency pulls in (transitive dependencies):
+    //   - Embedded Tomcat (web server — no need to install Tomcat separately)
+    //   - Spring MVC (the framework behind @RestController, @GetMapping, etc.)
+    //   - Jackson (automatically converts Java objects to JSON and back)
+    //
+    // No version number needed — the io.spring.dependency-management plugin
+    // resolves it automatically (just like Maven's parent POM did).
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+
+    // ── Dependency 2: spring-boot-starter-jdbc ──────────────────────────────
+    // Maven equivalent:
+    //   <dependency>
+    //       <groupId>org.springframework.boot</groupId>
+    //       <artifactId>spring-boot-starter-jdbc</artifactId>
+    //   </dependency>
+    //
+    // What it provides:
+    //   - Auto-configured DataSource (database connection pool)
+    //   - JdbcTemplate (Spring's simplified JDBC wrapper)
+    //   - Transaction management
+    //
+    // We use raw JDBC (Statement, not JdbcTemplate) intentionally in
+    // LoginController to demonstrate SQL injection.
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+
+    // ── Dependency 3: H2 Database ───────────────────────────────────────────
+    // Maven equivalent:
+    //   <dependency>
+    //       <groupId>com.h2database</groupId>
+    //       <artifactId>h2</artifactId>
+    //       <scope>runtime</scope>
+    //   </dependency>
+    //
+    // <scope>runtime</scope> in Maven = runtimeOnly in Gradle
+    //
+    // WHY runtimeOnly (not implementation)?
+    //   Our Java code never imports H2 classes directly — we use the standard
+    //   java.sql.* interfaces (Connection, Statement, ResultSet).
+    //   H2 is only needed when the application RUNS (it provides the JDBC driver
+    //   that java.sql uses behind the scenes).
+    //   runtimeOnly = "include this JAR at runtime but don't let code import from it"
+    runtimeOnly 'com.h2database:h2'
+
+    // ── Dependency 4: spring-boot-starter-test ──────────────────────────────
+    // Maven equivalent:
+    //   <dependency>
+    //       <groupId>org.springframework.boot</groupId>
+    //       <artifactId>spring-boot-starter-test</artifactId>
+    //       <scope>test</scope>
+    //   </dependency>
+    //
+    // <scope>test</scope> in Maven = testImplementation in Gradle
+    //
+    // What it provides:
+    //   - JUnit 5 (the testing framework)
+    //   - Mockito (for creating mock objects)
+    //   - Spring Test utilities (for testing Spring components)
+    //
+    // These libraries are ONLY available during `gradlew.bat test`
+    // — they are NOT included in the final production JAR.
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+
+// =============================================================================
+// TEST CONFIGURATION — How should Gradle run tests?
+// =============================================================================
+// This tells Gradle to use JUnit Platform (JUnit 5) when running tests.
+// Without this, Gradle might try to use JUnit 4's test runner, which would
+// fail because our starter-test pulls in JUnit 5.
+//
+// Maven equivalent: The spring-boot-starter-parent automatically configures
+// the maven-surefire-plugin to use JUnit 5. In Gradle, we do it explicitly.
+tasks.named('test') {
+    // useJUnitPlatform() = "use JUnit 5 to discover and run tests"
+    // JUnit 5 uses the "JUnit Platform" as its test engine.
+    useJUnitPlatform()
+}
+
+
+// =============================================================================
+// SPRING BOOT MAIN CLASS — Tell the plugin which class to run
+// =============================================================================
+// Normally, the Spring Boot plugin SCANS your compiled .class files to find
+// the class annotated with @SpringBootApplication. It uses a bytecode library
+// called ASM to read the .class files.
+//
+// PROBLEM: Spring Boot 3.2.5's ASM version doesn't support Java 24's class
+// file format (major version 68). The scan fails with:
+//   "Unsupported class file major version 68"
+//
+// FIX: Explicitly tell the plugin which class is the entry point.
+// This skips the bytecode scanning entirely — the plugin trusts you.
+//
+// We know the main class from Stage 1 audit: SearchBackendApplication.java
+// in package com.dast.demo, annotated with @SpringBootApplication.
+springBoot {
+    mainClass = 'com.dast.demo.SearchBackendApplication'
+}
+
+
+// =============================================================================
+// BOOTRUN CONFIGURATION — How to run the application locally
+// =============================================================================
+// This configures the `gradlew.bat bootRun` task.
+// Maven equivalent: `mvn spring-boot:run`
+//
+// The bootRun task:
+//   1. Compiles your Java code
+//   2. Starts embedded Tomcat on port 8080 (from application.properties)
+//   3. Deploys your Spring Boot app into Tomcat
+//   4. Keeps running until you press Ctrl+C
+bootRun {
+    // Pass system properties to the running application.
+    // This allows you to override application.properties values from the command line:
+    //   gradlew.bat bootRun -Dserver.port=9090
+    // Without this line, -D flags would be ignored by bootRun.
+    systemProperties = System.properties
+}

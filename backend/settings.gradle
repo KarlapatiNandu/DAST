@@ -1,0 +1,30 @@
+// =============================================================================
+// SETTINGS.GRADLE — Project Identity
+// =============================================================================
+//
+// WHAT THIS FILE DOES:
+//   settings.gradle defines the PROJECT NAME and the structure of multi-project
+//   builds (which projects are included). It runs BEFORE build.gradle.
+//
+// MAVEN EQUIVALENT:
+//   In pom.xml, the project name lived inside the <artifactId> tag:
+//     <artifactId>search-backend</artifactId>
+//   In Gradle, that concept moves here to settings.gradle.
+//
+// SETTINGS.GRADLE vs BUILD.GRADLE:
+//   - settings.gradle → WHO am I? (project name, subproject layout)
+//   - build.gradle    → HOW do I build? (plugins, dependencies, tasks)
+//
+// WHY SEPARATED?
+//   Maven uses a single pom.xml for everything.
+//   Gradle splits identity (settings.gradle) from build logic (build.gradle)
+//   because in multi-module projects, you need to declare which modules
+//   exist BEFORE any build logic runs.
+//
+// For our project, this is a single-module build, so this file is simple.
+// =============================================================================
+
+// rootProject.name sets the name of the top-level project.
+// This is the Gradle equivalent of <artifactId>search-backend</artifactId> in pom.xml.
+// The JAR file produced by the build will be named: search-backend-0.0.1-SNAPSHOT.jar
+rootProject.name = 'search-backend'
