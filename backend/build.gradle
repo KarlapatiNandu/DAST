@@ -87,14 +87,14 @@ version = '0.0.1-SNAPSHOT'
 //
 // ORIGINAL POM.XML HAD: <java.version>17</java.version>
 //   This means "minimum Java 17" — NOT "must be exactly Java 17."
-//   Java is backward-compatible, so Java 24 can compile and run Java 17 code.
-//   Spring Boot 3.2.5 requires Java 17+, and Java 24 satisfies that requirement.
+//   Java is backward-compatible, so Java 21 can compile and run Java 17 code.
+//   Spring Boot 3.2.5 requires Java 17+, and Java 21 satisfies that requirement.
 //
-// WHY 24 INSTEAD OF 17?
+// WHY 21 INSTEAD OF 17?
 //   The toolchain API tells Gradle: "find a JDK with this EXACT major version."
-//   If you set languageVersion = 17 but only have JDK 24 installed, Gradle fails:
+//   If you set languageVersion = 17 but only have JDK 21 installed, Gradle fails:
 //     "Cannot find a Java installation matching: {languageVersion=17}"
-//   Since this machine has Java 24, we set it to 24.
+//   Since this machine has Java 21 (required by Jenkins), we set it to 21.
 //
 // WHY TOOLCHAIN INSTEAD OF sourceCompatibility?
 //   The older approach was: sourceCompatibility = '17'
@@ -103,10 +103,10 @@ version = '0.0.1-SNAPSHOT'
 //   It also ensures the CORRECT JDK is used for compilation, testing, and running.
 java {
     toolchain {
-        // This tells Gradle: "compile this project with Java 24"
-        // Change this number to match YOUR installed JDK version.
+        // This tells Gradle: "compile this project with Java 21"
+        // We use JDK 21 because Jenkins requires it.
         // Run `java -version` to check which version you have.
-        languageVersion = JavaLanguageVersion.of(24)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
@@ -269,12 +269,13 @@ tasks.named('test') {
 // the class annotated with @SpringBootApplication. It uses a bytecode library
 // called ASM to read the .class files.
 //
-// PROBLEM: Spring Boot 3.2.5's ASM version doesn't support Java 24's class
-// file format (major version 68). The scan fails with:
-//   "Unsupported class file major version 68"
-//
-// FIX: Explicitly tell the plugin which class is the entry point.
-// This skips the bytecode scanning entirely — the plugin trusts you.
+// HISTORY: When this project used Java 24, the ASM scan failed because
+// Spring Boot 3.2.5's ASM didn't support Java 24's class file format
+// (major version 68). With JDK 21, the scan works fine — but we keep
+// the explicit mainClass as a BEST PRACTICE:
+//   - It avoids the bytecode scan entirely (faster builds)
+//   - It makes the entry point obvious to anyone reading build.gradle
+//   - It prevents future breakage if the JDK version changes again
 //
 // We know the main class from Stage 1 audit: SearchBackendApplication.java
 // in package com.dast.demo, annotated with @SpringBootApplication.

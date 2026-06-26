@@ -1,0 +1,318 @@
+# =============================================================================
+# ZAP AUTOMATION FRAMEWORK PLAN — DAST Learning Lab
+# =============================================================================
+#
+# WHAT THIS FILE DOES:
+#   This is a ZAP Automation Framework "plan" — a YAML file that tells ZAP
+#   exactly what to do, step by step, without any human interaction.
+#
+#   Instead of using -quickurl (which tries to crawl a website starting from
+#   a homepage), this plan uses the OpenAPI specification to AUTOMATICALLY
+#   discover every API endpoint. This is the correct approach for REST APIs
+#   that don't have a traditional homepage to crawl.
+#
+# WHY WE SWITCHED FROM -quickurl TO -autorun:
+#   Problem: Our app is a REST API. The root URL (http://localhost:8080/)
+#            returns HTTP 404 because there's no homepage — only API endpoints.
+#            -quickurl expects to spider/crawl from a valid page (HTTP 200),
+#            so it never finds any endpoints to scan.
+#
+#   Solution: The Automation Framework's "openapi" job reads the OpenAPI spec
+#             at /v3/api-docs and imports ALL endpoints into ZAP's site tree.
+#             ZAP then knows exactly where to send attack payloads.
+#
+# HOW THIS SCALES AS THE API GROWS:
+#   When a developer adds a new @RestController (e.g., /api/users),
+#   Springdoc automatically adds it to the OpenAPI spec at /v3/api-docs.
+#   On the next Jenkins build, ZAP reads the updated spec and scans the
+#   new endpoint — NO changes needed to this file or the Jenkinsfile.
+#
+# HOW TO RUN THIS FILE:
+#   From the command line:
+#     zap.bat -cmd -autorun zap\zap-automation.yaml
+#
+#   In Jenkins (see Jenkinsfile):
+#     "%ZAP_PATH%\\zap.bat" -cmd -addonupdate -autorun "%WORKSPACE%\\zap\\zap-automation.yaml"
+#
+# EXECUTION ORDER:
+#   The "jobs" list below runs TOP to BOTTOM, in this order:
+#     1. openapi         → Import all endpoints from the OpenAPI spec
+#     2. passiveScan-wait → Wait for passive analysis to finish
+#     3. activeScan      → Send attack payloads to every endpoint
+#     4. report          → Generate the HTML report
+#
+# REFERENCE:
+#   ZAP Automation Framework docs:
+#     https://www.zaproxy.org/docs/automate/automation-framework/
+#   OpenAPI job docs:
+#     https://www.zaproxy.org/docs/desktop/addons/openapi-support/automation/
+# =============================================================================
+
+
+# =============================================================================
+# ENV — Environment configuration
+# =============================================================================
+# The "env" section defines WHAT we're scanning and HOW ZAP should scope it.
+#
+# Think of a "context" as ZAP's understanding of "what is part of my target
+# application?" — it defines which URLs are in-scope for scanning and which
+# should be ignored.
+#
+# WHY DEFINE A CONTEXT?
+#   Without a context, ZAP might try to scan external URLs (e.g., if your
+#   API returns links to google.com, ZAP would try to scan Google — bad!).
+#   The context restricts ZAP to only scan URLs matching our patterns.
+env:
+  contexts:
+    # ── Context definition ───────────────────────────────────────────────
+    # "name" is just a label — you'll see it in ZAP's UI and logs.
+    # It helps identify which context the scan results belong to.
+    - name: "DAST-API-Context"
+
+      # "urls" is the list of base URLs that belong to this context.
+      # ZAP uses these as the starting point for building its site tree.
+      # Our Spring Boot app runs on localhost:8080 (set in application.properties).
+      urls:
+        - "http://localhost:8080"
+
+      # "includePaths" defines a regex pattern for URLs that ARE in scope.
+      # "http://localhost:8080/.*" means "any URL starting with http://localhost:8080/"
+      # The .* is a regex wildcard meaning "any characters after the base URL."
+      #
+      # This ensures ALL endpoints under localhost:8080 are scanned:
+      #   /api/login, /api/greet, /api/echo, /api/search, etc.
+      includePaths:
+        - "http://localhost:8080/.*"
+
+      # "excludePaths" defines regex patterns for URLs to SKIP.
+      # Empty list = don't exclude anything.
+      #
+      # In a real project, you might exclude:
+      #   - "http://localhost:8080/actuator/.*"  (Spring Boot health endpoints)
+      #   - "http://localhost:8080/h2-console/.*" (database console)
+      # For our learning lab, we scan everything to see all findings.
+      excludePaths: []
+
+
+# =============================================================================
+# JOBS — The ordered list of tasks ZAP will execute
+# =============================================================================
+# Jobs run sequentially, top to bottom. Each job type corresponds to a
+# ZAP feature (import, scan, report, etc.).
+#
+# Our pipeline:
+#   openapi → passiveScan-wait → activeScan → report
+#
+# This is equivalent to doing the following manually in ZAP's GUI:
+#   1. Import → OpenAPI Definition → paste the spec URL
+#   2. Wait for the passive scanner icon to stop spinning
+#   3. Right-click the site → Active Scan → Start Scan
+#   4. Report → Generate HTML Report
+jobs:
+
+  # ===========================================================================
+  # JOB 1: OPENAPI — Import API endpoints from the OpenAPI specification
+  # ===========================================================================
+  # WHAT THIS DOES:
+  #   Reads the OpenAPI (Swagger) spec from the running backend and imports
+  #   every endpoint into ZAP's "site tree" — ZAP's internal map of the app.
+  #
+  # WHY THIS IS THE KEY TO SCALABILITY:
+  #   The OpenAPI spec is AUTO-GENERATED by Springdoc. It reads all your
+  #   @RestController, @GetMapping, @PostMapping, @RequestParam, etc.
+  #   annotations and produces a JSON document listing every endpoint.
+  #
+  #   When a developer adds a new controller (e.g., UserController with
+  #   GET /api/users), Springdoc adds it to the spec automatically.
+  #   ZAP reads the updated spec and scans the new endpoint — no pipeline
+  #   changes needed. This is why we DON'T hardcode endpoint URLs anywhere.
+  #
+  # WHAT HAPPENS BEHIND THE SCENES:
+  #   1. ZAP sends GET http://localhost:8080/v3/api-docs
+  #   2. ZAP parses the JSON response (OpenAPI 3.0 format)
+  #   3. For each path + method + parameter, ZAP creates a "site node"
+  #   4. ZAP sends a sample request to each endpoint (using example values
+  #      from the spec or default values for each parameter type)
+  #   5. These requests go through ZAP's passive scanner automatically
+  #
+  # ENDPOINTS ZAP WILL DISCOVER FROM OUR SPEC:
+  #   | Method | Path          | Parameters              |
+  #   |--------|---------------|-------------------------|
+  #   | POST   | /api/login    | username, password      |
+  #   | GET    | /api/greet    | name                    |
+  #   | GET    | /api/echo     | input                   |
+  #   | GET    | /api/search   | query                   |
+  - type: openapi
+    parameters:
+      # "apiUrl" tells ZAP WHERE to fetch the OpenAPI specification from.
+      # This must be the LIVE URL of the running backend's spec endpoint.
+      # Springdoc serves the spec at /v3/api-docs (configured in application.properties).
+      apiUrl: "http://localhost:8080/v3/api-docs"
+
+      # "targetUrl" tells ZAP WHERE to send the actual HTTP requests.
+      # This overrides the "servers" field in the OpenAPI spec.
+      #
+      # WHY DO WE NEED BOTH apiUrl AND targetUrl?
+      #   apiUrl  = "where is the spec document?"  (could be a file or remote URL)
+      #   targetUrl = "where should I send attack traffic?"
+      #
+      #   In our case they're on the same server, but in a real company:
+      #     apiUrl might point to a spec hosted on a documentation server
+      #     targetUrl would point to the staging/test environment to attack
+      targetUrl: "http://localhost:8080"
+
+
+  # ===========================================================================
+  # JOB 2: PASSIVE SCAN WAIT — Wait for passive analysis to complete
+  # ===========================================================================
+  # WHAT THIS DOES:
+  #   Pauses the plan until ZAP's passive scanner has finished analyzing
+  #   ALL the HTTP responses from the OpenAPI import step above.
+  #
+  # WHY THIS IS NEEDED:
+  #   ZAP's passive scanner runs in the BACKGROUND. When the openapi job
+  #   imports endpoints and sends sample requests, the responses are queued
+  #   for passive analysis. If we jump straight to active scanning, we
+  #   might miss passive findings (missing headers, info disclosure, etc.)
+  #   because the passive scanner hasn't finished processing the queue yet.
+  #
+  # WHAT PASSIVE SCANNING FINDS (without attacking):
+  #   - Missing security headers (X-Content-Type-Options, X-Frame-Options)
+  #   - Information disclosure (server version, stack traces)
+  #   - Insecure cookies (missing Secure, HttpOnly, SameSite flags)
+  #   - CORS misconfigurations (our @CrossOrigin(origins="*") will be flagged!)
+  #   - Content-Type mismatches
+  #
+  # PASSIVE vs ACTIVE — THE KEY DIFFERENCE:
+  #   Passive = READ the responses, don't modify the requests (safe)
+  #   Active  = MODIFY the requests with attack payloads (dangerous)
+  - type: passiveScan-wait
+    parameters:
+      # Maximum time (in minutes) to wait for the passive scanner to finish.
+      # 5 minutes is generous for our small API (4 endpoints).
+      # If the queue isn't empty after 5 minutes, the plan moves on anyway.
+      maxDuration: 5
+
+
+  # ===========================================================================
+  # JOB 3: ACTIVE SCAN — Send attack payloads to every endpoint
+  # ===========================================================================
+  # WHAT THIS DOES:
+  #   For each endpoint + parameter discovered by the OpenAPI import,
+  #   ZAP sends HUNDREDS of malicious payloads and analyzes the responses
+  #   to find exploitable vulnerabilities.
+  #
+  # EXAMPLE ATTACK PAYLOADS ZAP SENDS:
+  #   For POST /api/login (parameter: username):
+  #     - ' OR '1'='1' --           (SQL Injection — CWE-89)
+  #     - admin' UNION SELECT * --  (SQL Injection — CWE-89)
+  #     - 1; DROP TABLE users --    (SQL Injection — CWE-89)
+  #
+  #   For GET /api/greet (parameter: name):
+  #     - <script>alert(1)</script>           (Reflected XSS — CWE-79)
+  #     - <img src=x onerror=alert(1)>        (Reflected XSS — CWE-79)
+  #     - javascript:alert(document.cookie)   (Reflected XSS — CWE-79)
+  #
+  # WHAT WE EXPECT ZAP TO FIND IN OUR APP:
+  #   | Endpoint       | Vulnerability        | Why it's vulnerable              |
+  #   |----------------|----------------------|----------------------------------|
+  #   | POST /api/login| SQL Injection        | String concatenation in SQL      |
+  #   | GET /api/greet | Reflected XSS        | User input echoed in raw HTML    |
+  #   | GET /api/echo  | Reflected XSS        | User input echoed in raw HTML    |
+  #   | GET /api/search| XSS (lower severity) | JSON context (safer but flagged) |
+  #
+  # WARNING: NEVER run active scans against production systems or
+  #    systems you don't own! ZAP sends REAL attack payloads that can
+  #    corrupt data, crash servers, or trigger security alerts.
+  - type: activeScan
+    parameters:
+      # "context" links this scan to our context defined in the env section.
+      # This ensures ZAP only attacks URLs within our includePaths pattern
+      # and doesn't accidentally attack external URLs.
+      context: "DAST-API-Context"
+
+      # Maximum total time for the entire active scan (in minutes).
+      # 30 minutes is plenty for our 4 endpoints.
+      # A large API with 100+ endpoints might need 60-120 minutes.
+      maxScanDurationInMins: 30
+
+      # Maximum time per individual scan rule (in minutes).
+      # 0 = unlimited — let each rule run until it finishes.
+      # Setting this prevents a single rule from hogging the entire scan time.
+      maxRuleDurationInMins: 0
+
+      # ── Scan Policy ──────────────────────────────────────────────────
+      # The policy controls HOW AGGRESSIVELY ZAP tests each vulnerability type.
+      #
+      # "defaultStrength" controls how many payloads ZAP sends per parameter:
+      #   low    = fewer payloads (faster but might miss things)
+      #   medium = balanced (good for CI/CD pipelines)
+      #   high   = more payloads (slower but more thorough)
+      #   insane = maximum payloads (very slow, use for dedicated security testing)
+      #
+      # "defaultThreshold" controls how confident ZAP must be to report a finding:
+      #   low    = report anything suspicious (more false positives)
+      #   medium = balanced confidence level
+      #   high   = only report high-confidence findings (fewer false positives)
+      #   off    = disable the rule entirely
+      #
+      # "medium/medium" is the sweet spot for CI/CD: fast enough for every
+      # build, thorough enough to catch real vulnerabilities.
+      policyDefinition:
+        defaultStrength: "medium"
+        defaultThreshold: "medium"
+
+
+  # ===========================================================================
+  # JOB 4: REPORT — Generate the HTML scan report
+  # ===========================================================================
+  # WHAT THIS DOES:
+  #   After all scanning is complete, ZAP generates an HTML report containing:
+  #     - Summary of all findings (High/Medium/Low/Informational)
+  #     - Details of each vulnerability (URL, parameter, evidence, solution)
+  #     - Risk/Confidence matrix
+  #     - Request/Response pairs showing the actual attack traffic
+  #
+  # The report is saved to the Jenkins workspace so the "Publish ZAP Report"
+  # stage in the Jenkinsfile can display it in the Jenkins UI using the
+  # HTML Publisher plugin.
+  #
+  # AVAILABLE TEMPLATES:
+  #   "traditional-html"       → Full HTML report (what we use)
+  #   "traditional-json"       → JSON format (for programmatic processing)
+  #   "traditional-xml"        → XML format (for tool integration)
+  #   "risk-confidence-html"   → Simplified risk/confidence matrix
+  #   "traditional-md"         → Markdown format
+  #
+  # We use "traditional-html" because it's the most readable and includes
+  # all details needed for understanding and remediating vulnerabilities.
+  - type: report
+    parameters:
+      # "template" selects the report format.
+      # "traditional-html" produces a full, detailed HTML report with
+      # interactive elements, color-coded risk levels, and expandable details.
+      template: "traditional-html"
+
+      # "reportDir" is the directory where the report file will be saved.
+      # We use the same "zap-reports" directory that the Jenkinsfile creates
+      # and that the HTML Publisher plugin reads from.
+      #
+      # NOTE: This path is relative to ZAP's working directory, which is
+      # the Jenkins workspace when run via the Jenkinsfile.
+      reportDir: "C:\\Users\\nandu\\.jenkins\\workspace\\DAST-Pipeline\\zap-reports"
+
+      # "reportFile" is the filename for the generated report.
+      # The Jenkinsfile's publishHTML step must reference this exact filename.
+      reportFile: "zap-automation-report"
+
+      # "reportTitle" appears at the top of the HTML report.
+      # Helps identify which project/scan produced this report.
+      reportTitle: "DAST Learning Lab — ZAP Automation Framework Report"
+
+      # "reportDescription" is a subtitle in the report.
+      reportDescription: "OpenAPI-driven security scan of all API endpoints"
+
+      # "displayReport" controls whether ZAP opens the report in a browser
+      # after generation. false = don't open (we're running headless in CI/CD).
+      # In GUI mode, setting this to true would auto-open the report.
+      displayReport: false

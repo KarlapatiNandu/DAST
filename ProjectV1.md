@@ -33,8 +33,8 @@ Update ProjectV1.md to mark the stage complete.
 | 1 | Project Audit | ✅ Complete |
 | 2 | Gradle Migration | ✅ Complete |
 | 2B | OpenAPI / Swagger Integration | ✅ Complete |
-| 3 | Jenkins Installation & Configuration | ⬜ Not Started |
-| 4 | Jenkinsfile (Windows) | ⬜ Not Started |
+| 3 | Jenkins Installation & Configuration | ✅ Complete |
+| 4 | Jenkinsfile (Windows) | ✅ Complete |
 | 5 | ZAP Automation Framework Config | ⬜ Not Started |
 | 6 | Secure Controllers | ⬜ Not Started |
 | 7 | Interview Prep Document | ⬜ Not Started |
@@ -102,36 +102,38 @@ Update ProjectV1.md to mark the stage complete.
 
 ---
 
-## Stage 3 — Jenkins Installation & Configuration ⬜
+## Stage 3 — Jenkins Installation & Configuration ✅
 
-- [ ] Create `JENKINS_SETUP.md` at project root
-  - [ ] Section 1: Installing Jenkins on Windows (jenkins.war, port 9090)
-  - [ ] Section 2: Configuring Gradle in Jenkins (recommend wrapper)
-  - [ ] Section 3: Configuring ZAP path as Jenkins env variable
-  - [ ] Section 4: Creating a Pipeline job in Jenkins UI
+- [x] Create `JENKINS_SETUP.md` at project root
+  - [x] Section 1: Installing Jenkins on Windows (jenkins.war, port 9090)
+  - [x] Section 2: Configuring Gradle in Jenkins (recommend wrapper)
+  - [x] Section 3: Configuring ZAP path as Jenkins env variable
+  - [x] Section 4: Creating a Pipeline job in Jenkins UI
+- **Deliverable:** [STAGE3_AUDIT.md](file:///c:/Users/nandu/OneDrive/Desktop/DAST/STAGE3_AUDIT.md)
 
-**Files to create:**
+**Files created:**
 | File | Path |
 |---|---|
 | JENKINS_SETUP.md | `/JENKINS_SETUP.md` |
 
 ---
 
-## Stage 4 — Jenkinsfile (Windows-specific) ⬜
+## Stage 4 — Jenkinsfile (Windows-specific) ✅
 
-- [ ] Create `Jenkinsfile` at project root
-  - [ ] `environment` block with ZAP_PATH, BACKEND_URL, ZAP_PORT, REPORT_DIR
-  - [ ] Stage: Checkout
-  - [ ] Stage: Build Backend (`gradlew.bat build -x test`)
-  - [ ] Stage: Test Backend (`gradlew.bat test` + junit publishing)
-  - [ ] Stage: Start Backend (background `start /b`, port-wait loop)
-  - [ ] Stage: ZAP Baseline Scan (passive, `-cmd` mode)
-  - [ ] Stage: ZAP Active Scan (attack mode, per-endpoint)
-  - [ ] Stage: Publish ZAP Report (HTML Publisher plugin + CSP fix)
-  - [ ] Stage: Stop Backend (find & kill Java process on port 8080)
-  - [ ] `post` block: always/success/failure handlers
+- [x] Create `Jenkinsfile` at project root
+  - [x] `environment` block with ZAP_PATH, BACKEND_URL, ZAP_PORT, REPORT_DIR
+  - [x] Stage: Checkout
+  - [x] Stage: Build Backend (`gradlew.bat build -x test`)
+  - [x] Stage: Test Backend (`gradlew.bat test` + junit publishing)
+  - [x] Stage: Start Backend (background `start /b`, port-wait loop)
+  - [x] Stage: ZAP Baseline Scan (passive, `-cmd` mode)
+  - [x] Stage: ZAP Active Scan (attack mode, per-endpoint)
+  - [x] Stage: Publish ZAP Report (HTML Publisher plugin + CSP fix)
+  - [x] Stage: Stop Backend (find & kill Java process on port 8080)
+  - [x] `post` block: always/success/failure handlers
+- **Deliverable:** [STAGE4_AUDIT.md](file:///c:/Users/nandu/OneDrive/Desktop/DAST/STAGE4_AUDIT.md)
 
-**Files to create:**
+**Files created:**
 | File | Path |
 |---|---|
 | Jenkinsfile | `/Jenkinsfile` |

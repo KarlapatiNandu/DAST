@@ -222,7 +222,7 @@ ERROR: JAVA_HOME is not set and no 'java' command could be found
 ```
 **Fix:** Set JAVA_HOME to your JDK installation:
 ```powershell
-$env:JAVA_HOME = "C:\Program Files\Java\jdk-24"
+$env:JAVA_HOME = "C:\Program Files\Java\jdk-21"
 ```
 
 ### Error 3: "Could not resolve dependencies"
