@@ -214,6 +214,35 @@ dependencies {
     // These libraries are ONLY available during `gradlew.bat test`
     // — they are NOT included in the final production JAR.
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+    // ── Dependency 5: springdoc-openapi-starter-webmvc-ui ───────────────────
+    // NO Maven equivalent — this is NEW in Stage 2B.
+    //
+    // WHAT SPRINGDOC DOES:
+    //   Springdoc reads your Spring annotations (@RestController, @GetMapping,
+    //   @PostMapping, @RequestParam, etc.) and AUTOMATICALLY generates an
+    //   OpenAPI 3.0 specification (JSON) describing all your endpoints.
+    //
+    //   It also bundles Swagger UI — a web-based interactive API explorer
+    //   where you can see every endpoint and test them with "Try it out" buttons.
+    //
+    // WHY VERSION 2.x (NOT 1.x)?
+    //   ⚠️  COMMON MISTAKE: springdoc-openapi version 1.x ONLY works with
+    //   Spring Boot 2.x. Our project uses Spring Boot 3.2.5 (Jakarta EE).
+    //   Version 2.x was rewritten for Spring Boot 3.x / Jakarta EE.
+    //   If you use 1.x with Spring Boot 3.x, you'll get:
+    //     "ClassNotFoundException: javax.servlet.http.HttpServletRequest"
+    //   because Spring Boot 3.x renamed javax.* to jakarta.*.
+    //
+    // WHAT THIS GIVES US:
+    //   - http://localhost:8080/swagger-ui.html  → visual API explorer
+    //   - http://localhost:8080/v3/api-docs      → raw OpenAPI JSON spec
+    //
+    // WHY THIS MATTERS FOR ZAP (Stage 5):
+    //   ZAP can import the /v3/api-docs spec and automatically discover
+    //   ALL endpoints — no need to hardcode URLs in the Jenkinsfile.
+    //   When you add a new controller, ZAP scans it automatically.
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
 }
 
 

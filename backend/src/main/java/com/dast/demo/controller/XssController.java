@@ -1,5 +1,12 @@
 package com.dast.demo.controller;
 
+// ── Springdoc OpenAPI imports (Stage 2B) ─────────────────────────────────
+// @Operation = describes WHAT the endpoint does
+// @Parameter = describes each INPUT field
+// These do NOT change behavior — they only add documentation to the spec.
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
@@ -81,8 +88,19 @@ public class XssController {
      * @param name  the user-supplied name to greet
      * @return      raw HTML with the name embedded (unsanitized!)
      */
+    // ── OpenAPI Annotations (Stage 2B) ────────────────────────────────────
+    // @Operation documents this endpoint in the OpenAPI spec / Swagger UI.
+    // ZAP reads the spec and knows to test this endpoint with XSS payloads.
+    @Operation(
+        summary = "Vulnerable greeting endpoint",
+        description = "Demonstrates Reflected XSS - CWE-79. "
+                    + "User input is embedded directly into an HTML response "
+                    + "without sanitization. The response Content-Type is text/html, "
+                    + "which means browsers will execute any injected scripts."
+    )
     @GetMapping(value = "/greet", produces = MediaType.TEXT_HTML_VALUE)
     public String greet(
+            @Parameter(description = "Name field - injectable via unsanitized HTML embedding")
             @RequestParam(value = "name", required = false, defaultValue = "World") String name
             // ↑ ZAP will fuzz this parameter with XSS payloads
     ) {
@@ -139,8 +157,16 @@ public class XssController {
      *
      * ⚠️  INTENTIONALLY VULNERABLE — DO NOT USE IN PRODUCTION ⚠️
      */
+    // ── OpenAPI Annotations (Stage 2B) ────────────────────────────────────
+    @Operation(
+        summary = "Vulnerable echo endpoint",
+        description = "Second Reflected XSS example - CWE-79. "
+                    + "Echoes user input directly into HTML without escaping. "
+                    + "Provides ZAP with an additional XSS attack surface."
+    )
     @GetMapping(value = "/echo", produces = MediaType.TEXT_HTML_VALUE)
     public String echo(
+            @Parameter(description = "Input text - echoed directly into HTML without escaping")
             @RequestParam(value = "input", required = false, defaultValue = "") String input
     ) {
         // Same vulnerability pattern — raw user input in HTML

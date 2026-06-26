@@ -1,6 +1,14 @@
 package com.dast.demo.controller;
 
 import com.dast.demo.model.SearchResponse;
+
+// ── Springdoc OpenAPI imports (Stage 2B) ─────────────────────────────────
+// @Operation = describes WHAT the endpoint does
+// @Parameter = describes each INPUT field
+// These do NOT change behavior — they only add documentation to the spec.
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -63,8 +71,20 @@ public class SearchController {
      *   new SearchResponse("you searched for: hello")
      *       → {"result": "you searched for: hello"}
      */
+    // ── OpenAPI Annotations (Stage 2B) ────────────────────────────────────
+    // @Operation documents this endpoint in the OpenAPI spec / Swagger UI.
+    // Even though the response is JSON (which mitigates XSS execution in
+    // browsers), ZAP still tests for reflected content in the response body.
+    @Operation(
+        summary = "Vulnerable search endpoint",
+        description = "Demonstrates Reflected XSS in JSON context. "
+                    + "User input is echoed in the JSON response without sanitization. "
+                    + "While JSON Content-Type prevents browser script execution, "
+                    + "the unsanitized reflection is still a finding ZAP reports."
+    )
     @GetMapping("/search")
     public SearchResponse search(
+            @Parameter(description = "Search query - injectable, reflected in JSON response")
             @RequestParam(value = "query", required = false, defaultValue = "") String query
             // ↑ value = "query"       : the URL parameter name (?query=...)
             // ↑ required = false      : no error if client doesn't send ?query=

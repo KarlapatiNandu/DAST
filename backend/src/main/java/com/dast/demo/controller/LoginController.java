@@ -1,5 +1,13 @@
 package com.dast.demo.controller;
 
+// ── Springdoc OpenAPI imports (Stage 2B) ─────────────────────────────────
+// These annotations describe the endpoint for the OpenAPI specification.
+// Springdoc reads them and includes the information in /v3/api-docs.
+// @Operation = describes WHAT the endpoint does (summary + description)
+// @Parameter = describes each INPUT field (name, description, where it comes from)
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -107,10 +115,30 @@ public class LoginController {
      * @param password  from the form field "password"
      * @return          a JSON map with: success, message, query
      */
+    // ── OpenAPI Annotations (Stage 2B) ────────────────────────────────────
+    // @Operation tells Springdoc: "Here's what this endpoint does."
+    //   summary  = short one-line description (shown in Swagger UI endpoint list)
+    //   description = longer explanation (shown when you expand the endpoint)
+    //
+    // These annotations do NOT change behavior — they only add documentation
+    // to the generated OpenAPI spec (/v3/api-docs) and Swagger UI.
+    @Operation(
+        summary = "Vulnerable login endpoint",
+        description = "Demonstrates SQL Injection - CWE-89. "
+                    + "This endpoint concatenates user input directly into SQL queries "
+                    + "using java.sql.Statement instead of PreparedStatement. "
+                    + "ZAP's active scanner will inject SQL metacharacters and detect "
+                    + "error-based and boolean-based SQL injection."
+    )
     @PostMapping("/login")
     public Map<String, Object> login(
+            // @Parameter tells Springdoc: "Here's what this input field is."
+            //   description = explains the parameter's purpose
+            //   ZAP reads this to understand what kind of data to inject.
+            @Parameter(description = "Username - injectable via SQL concatenation")
             @RequestParam(value = "username", defaultValue = "") String username,
             // ↑ ZAP will fuzz this parameter with SQL injection payloads
+            @Parameter(description = "Password field - also injectable")
             @RequestParam(value = "password", defaultValue = "") String password
             // ↑ ZAP will fuzz this parameter too
     ) {

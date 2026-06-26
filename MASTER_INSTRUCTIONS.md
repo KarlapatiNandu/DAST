@@ -112,7 +112,7 @@ At the start of every new chat:
 
 ---
 
-### STAGE 2 — GRADLE MIGRATION ✅ COMPLETE
+### STAGE 2 — GRADLE MIGRATION
 
 Replace Maven with Gradle. Create these files in /backend/:
 

@@ -32,7 +32,7 @@ Update ProjectV1.md to mark the stage complete.
 |---|---|---|
 | 1 | Project Audit | ✅ Complete |
 | 2 | Gradle Migration | ✅ Complete |
-| 2B | OpenAPI / Swagger Integration | ⬜ Not Started |
+| 2B | OpenAPI / Swagger Integration | ✅ Complete |
 | 3 | Jenkins Installation & Configuration | ⬜ Not Started |
 | 4 | Jenkinsfile (Windows) | ⬜ Not Started |
 | 5 | ZAP Automation Framework Config | ⬜ Not Started |
@@ -59,8 +59,8 @@ Update ProjectV1.md to mark the stage complete.
 - [x] Create `/backend/build.gradle`
 - [x] Generate Gradle wrapper files (`gradlew`, `gradlew.bat`, `gradle/wrapper/`)
 - [x] Verify build works: `gradlew.bat build`
-- [ ] Delete `pom.xml` after confirming build (deferred to Stage 2B — kept as reference)
-- [ ] Clean up `target/` directory (deferred to Stage 2B)
+- [x] Delete `pom.xml` after confirming build (completed in Stage 2B)
+- [x] Clean up `target/` directory (completed in Stage 2B — already clean)
 - [x] Update `.gitignore` for Gradle
 
 **Files to create:**
@@ -75,20 +75,21 @@ Update ProjectV1.md to mark the stage complete.
 
 ---
 
-## Stage 2B — OpenAPI / Swagger Integration ⬜
+## Stage 2B — OpenAPI / Swagger Integration ✅
 
-- [ ] Add `springdoc-openapi-starter-webmvc-ui:2.3.0` to `build.gradle`
-- [ ] Add Springdoc properties to `application.properties`
-- [ ] Add `@Operation` + `@Parameter` annotations to `LoginController`
-- [ ] Add `@Operation` + `@Parameter` annotations to `XssController` (greet + echo)
-- [ ] Add `@Operation` + `@Parameter` annotations to `SearchController`
-- [ ] Create `OpenApiConfig.java` config class
+- [x] Add `springdoc-openapi-starter-webmvc-ui:2.3.0` to `build.gradle`
+- [x] Add Springdoc properties to `application.properties`
+- [x] Add `@Operation` + `@Parameter` annotations to `LoginController`
+- [x] Add `@Operation` + `@Parameter` annotations to `XssController` (greet + echo)
+- [x] Add `@Operation` + `@Parameter` annotations to `SearchController`
+- [x] Create `OpenApiConfig.java` config class
 - [ ] Verify Swagger UI at `http://localhost:8080/swagger-ui.html`
 - [ ] Verify raw spec at `http://localhost:8080/v3/api-docs`
-- [ ] Provide ZAP Automation Framework YAML snippet for OpenAPI import
-- [ ] Write "How does your pipeline scale?" interview talking point
+- [x] Provide ZAP Automation Framework YAML snippet for OpenAPI import
+- [x] Write "How does your pipeline scale?" interview talking point
+- **Deliverable:** [STAGE2B_AUDIT.md](file:///c:/Users/nandu/OneDrive/Desktop/DAST/STAGE2B_AUDIT.md)
 
-**Files to create/modify:**
+**Files created/modified:**
 | Action | File | Path |
 |---|---|---|
 | MODIFY | build.gradle | `/backend/build.gradle` |
@@ -97,6 +98,7 @@ Update ProjectV1.md to mark the stage complete.
 | MODIFY | XssController.java | `/backend/src/main/java/com/dast/demo/controller/XssController.java` |
 | MODIFY | SearchController.java | `/backend/src/main/java/com/dast/demo/controller/SearchController.java` |
 | NEW | OpenApiConfig.java | `/backend/src/main/java/com/dast/demo/config/OpenApiConfig.java` |
+| DELETE | pom.xml | `/backend/pom.xml` (deferred from Stage 2) |
 
 ---
 
