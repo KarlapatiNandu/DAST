@@ -130,7 +130,7 @@ for /L %%i in (1,1,12) do (
     exit /b 0
   )
   echo Waiting for backend startup... attempt %%i of 12.
-  timeout /t 5 /nobreak > nul
+  ping -n 6 127.0.0.1 > nul
 )
 
 REM If the loop finishes, the app did not become ready in time.
@@ -159,9 +159,11 @@ if not exist "%ZAP_PLAN%" (
   exit /b 1
 )
 
-REM Confirm the configured ZAP launcher exists before trying to scan.
-if not exist "%ZAP_PATH%\\zap.bat" (
-  echo ERROR: ZAP launcher not found at %ZAP_PATH%\\zap.bat.
+REM Confirm the ZAP JAR exists before trying to scan.
+REM We call java -jar directly (bypassing zap.bat) because zap.bat uses
+REM a relative path to the JAR that breaks when run from the Jenkins workspace.
+if not exist "%ZAP_PATH%\\zap-2.17.0.jar" (
+  echo ERROR: ZAP JAR not found at %ZAP_PATH%\\zap-2.17.0.jar.
   exit /b 1
 )
 
@@ -170,7 +172,11 @@ if exist "%REPORT_DIR%\\zap-automation-report.html" del /f /q "%REPORT_DIR%\\zap
 
 REM Run ZAP headlessly with the Automation Framework plan.
 REM -cmd means no GUI, -addonupdate updates ZAP rules, -autorun executes YAML.
-call "%ZAP_PATH%\\zap.bat" -cmd -addonupdate -autorun "%ZAP_PLAN%"
+REM Call java -jar directly with the absolute path to the ZAP JAR.
+REM zap.bat uses a relative path (java -jar zap-2.17.0.jar) which only works
+REM when the working directory is the ZAP folder. Jenkins runs bat() from the
+REM workspace, so we bypass zap.bat and invoke the JAR ourselves.
+java -Xmx512m -jar "%ZAP_PATH%\\zap-2.17.0.jar" -cmd -addonupdate -autorun "%ZAP_PLAN%"
 
 REM Store ZAP's exit code so we can decide whether to fail the stage.
 set ZAP_EXIT=%ERRORLEVEL%

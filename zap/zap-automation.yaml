@@ -52,8 +52,10 @@ jobs:
     parameters:
       # context limits crawling to DAST-API-Context includePaths.
       context: "DAST-API-Context"
-      # url is the root URL the spider starts from.
-      url: "http://localhost:8080"
+      # url is the starting page the spider crawls from.
+      # Use /v3/api-docs instead of / because this REST API has no root handler
+      # and / returns 404. The OpenAPI spec page gives the spider valid links.
+      url: "http://localhost:8080/v3/api-docs"
       # maxDuration prevents a CI build from hanging forever.
       maxDuration: 5
 
@@ -113,8 +115,9 @@ jobs:
     parameters:
       # traditional-html is the full human-readable ZAP report template.
       template: "traditional-html"
-      # reportDir is relative to the Jenkins workspace when Jenkins runs zap.bat.
-      reportDir: "zap-reports"
+      # reportDir is relative to the YAML plan file location (zap/ folder).
+      # Use "../zap-reports" to navigate up to the workspace root level.
+      reportDir: "../zap-reports"
       # reportFile must match the Jenkinsfile publishHTML reportFiles value.
       reportFile: "zap-automation-report.html"
       # reportTitle appears at the top of the report.
