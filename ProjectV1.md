@@ -35,7 +35,7 @@ Update ProjectV1.md to mark the stage complete.
 | 2B | OpenAPI / Swagger Integration | ✅ Complete |
 | 3 | Jenkins Installation & Configuration | ✅ Complete |
 | 4 | Jenkinsfile (Windows) | ✅ Complete |
-| 5 | ZAP Automation Framework Config | ⬜ Not Started |
+| 5 | ZAP Automation Framework Config | ✅ Complete |
 | 6 | Secure Controllers | ⬜ Not Started |
 | 7 | Interview Prep Document | ⬜ Not Started |
 
@@ -126,8 +126,7 @@ Update ProjectV1.md to mark the stage complete.
   - [x] Stage: Build Backend (`gradlew.bat build -x test`)
   - [x] Stage: Test Backend (`gradlew.bat test` + junit publishing)
   - [x] Stage: Start Backend (background `start /b`, port-wait loop)
-  - [x] Stage: ZAP Baseline Scan (passive, `-cmd` mode)
-  - [x] Stage: ZAP Active Scan (attack mode, per-endpoint)
+  - [x] Stage: ZAP Automation Scan (Stage 5 update: `zap.bat -cmd -addonupdate -autorun "%ZAP_PLAN%"`)
   - [x] Stage: Publish ZAP Report (HTML Publisher plugin + CSP fix)
   - [x] Stage: Stop Backend (find & kill Java process on port 8080)
   - [x] `post` block: always/success/failure handlers
@@ -140,24 +139,28 @@ Update ProjectV1.md to mark the stage complete.
 
 ---
 
-## Stage 5 — ZAP Automation Framework Config ⬜
+## Stage 5 — ZAP Automation Framework Config ✅
 
-- [ ] Create `/zap/zap-automation.yaml`
-  - [ ] `env` section: target URLs, context
-  - [ ] `jobs` section: spider, activeScan, report
-  - [ ] Rules: 40018 (SQLi), 40012/40014 (XSS)
-- [ ] Create `/zap_testing_guide.md`
-  - [ ] DAST vs SAST analogy
-  - [ ] Manual ZAP workflow documentation
-  - [ ] What ZAP finds in THIS app (with controller references)
-  - [ ] How Jenkinsfile automates each manual step
-  - [ ] How to read ZAP alert severity levels
+- [x] Create `/zap/zap-automation.yaml`
+  - [x] `env` section: target URLs, context
+  - [x] `jobs` section: OpenAPI import, spider, passiveScan-wait, activeScan, report
+  - [x] Rules: 40018 (SQLi), 40012/40014 (XSS)
+- [x] Update `/Jenkinsfile` workflow to run `zap.bat -cmd -addonupdate -autorun "%ZAP_PLAN%"`
+- [x] Publish `zap-automation-report.html` as the Jenkins ZAP Automation Report
+- [x] Create `/zap_testing_guide.md`
+  - [x] DAST vs SAST analogy
+  - [x] Manual ZAP workflow documentation
+  - [x] What ZAP finds in THIS app (with controller references)
+  - [x] How Jenkinsfile automates each manual step
+  - [x] How to read ZAP alert severity levels
+- **Deliverable:** [STAGE5_AUDIT.md](file:///c:/Users/nandu/OneDrive/Desktop/DAST/STAGE5_AUDIT.md)
 
 **Files to create:**
 | File | Path |
 |---|---|
 | zap-automation.yaml | `/zap/zap-automation.yaml` |
 | zap_testing_guide.md | `/zap_testing_guide.md` |
+| STAGE5_AUDIT.md | `/STAGE5_AUDIT.md` |
 
 ---
 
