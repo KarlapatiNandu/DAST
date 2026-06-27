@@ -35,6 +35,7 @@ Update ProjectV1.md to mark the stage complete.
 | 2B | OpenAPI / Swagger Integration | ✅ Complete |
 | 3 | Jenkins Installation & Configuration | ✅ Complete |
 | 4 | Jenkinsfile (Windows) | ✅ Complete |
+| 4B | GitHub PR Trigger | ⬜ Not Started |
 | 5 | ZAP Automation Framework Config | ✅ Complete |
 | 6 | Secure Controllers | ⬜ Not Started |
 | 7 | Interview Prep Document | ⬜ Not Started |
@@ -139,6 +140,28 @@ Update ProjectV1.md to mark the stage complete.
 
 ---
 
+## Stage 4B — GitHub PR Trigger ⬜
+
+- [ ] Install Generic Webhook Trigger plugin in Jenkins
+- [ ] Install and configure ngrok (follow `NGROK_SETUP.md`)
+- [ ] Add `triggers { GenericTrigger(...) }` block to `Jenkinsfile`
+- [ ] Update `Checkout` stage to use `git` when triggered by webhook
+- [ ] Start ngrok tunnel (`ngrok http 9090`)
+- [ ] Configure GitHub webhook (repo → Settings → Webhooks)
+  - [ ] Set Payload URL to ngrok URL + `/generic-webhook-trigger/invoke?token=DAST-ZAP-SCAN`
+  - [ ] Set Content type to `application/json`
+  - [ ] Select only "Pull requests" event
+- [ ] Verify: open a test PR and confirm Jenkins auto-triggers
+- **Deliverable:** `STAGE4B_AUDIT.md`
+
+**Files created/modified:**
+| Action | File | Path |
+|---|---|---|
+| NEW | NGROK_SETUP.md | `/NGROK_SETUP.md` |
+| MODIFY | Jenkinsfile | `/Jenkinsfile` (add triggers block, update Checkout) |
+
+---
+
 ## Stage 5 — ZAP Automation Framework Config ✅
 
 - [x] Create `/zap/zap-automation.yaml`
@@ -224,11 +247,13 @@ Update ProjectV1.md to mark the stage complete.
 | 10 | NEW | `OpenApiConfig.java` | 2B |
 | 11 | NEW | `/JENKINS_SETUP.md` | 3 |
 | 12 | NEW | `/Jenkinsfile` | 4 |
-| 13 | NEW | `/zap/zap-automation.yaml` | 5 |
-| 14 | NEW | `/zap_testing_guide.md` | 5 |
-| 15 | NEW | `SecureLoginController.java` | 6 |
-| 16 | NEW | `SecureXssController.java` | 6 |
-| 17 | NEW | `SecureSearchController.java` | 6 |
-| 18 | NEW | `/INTERVIEW_PREP.md` | 7 |
+| 13 | NEW | `/NGROK_SETUP.md` | 4B |
+| 14 | MODIFY | `/Jenkinsfile` (triggers block + Checkout update) | 4B |
+| 15 | NEW | `/zap/zap-automation.yaml` | 5 |
+| 16 | NEW | `/zap_testing_guide.md` | 5 |
+| 17 | NEW | `SecureLoginController.java` | 6 |
+| 18 | NEW | `SecureXssController.java` | 6 |
+| 19 | NEW | `SecureSearchController.java` | 6 |
+| 20 | NEW | `/INTERVIEW_PREP.md` | 7 |
 
-**Total: 18 file operations across 7 stages**
+**Total: 20 file operations across 8 stages**
