@@ -34,7 +34,7 @@ Update ProjectV1.md to mark the stage complete.
 | 2 | Gradle Migration | ✅ Complete |
 | 2B | OpenAPI / Swagger Integration | ✅ Complete |
 | 3 | Jenkins Installation & Configuration | ✅ Complete |
-| 4 | Jenkinsfile (Windows) | ✅ Complete |
+| 4 | Jenkinsfile (Windows) | Needs Revision for OpenAPI-driven ZAP automation |
 | 5 | ZAP Automation Framework Config | ⬜ Not Started |
 | 6 | Secure Controllers | ⬜ Not Started |
 | 7 | Interview Prep Document | ⬜ Not Started |
@@ -118,7 +118,7 @@ Update ProjectV1.md to mark the stage complete.
 
 ---
 
-## Stage 4 — Jenkinsfile (Windows-specific) ✅
+## Stage 4 — Jenkinsfile (Windows-specific) Needs Revision
 
 - [x] Create `Jenkinsfile` at project root
   - [x] `environment` block with ZAP_PATH, BACKEND_URL, ZAP_PORT, REPORT_DIR
@@ -126,9 +126,10 @@ Update ProjectV1.md to mark the stage complete.
   - [x] Stage: Build Backend (`gradlew.bat build -x test`)
   - [x] Stage: Test Backend (`gradlew.bat test` + junit publishing)
   - [x] Stage: Start Backend (background `start /b`, port-wait loop)
-  - [x] Stage: ZAP Baseline Scan (passive, `-cmd` mode)
-  - [x] Stage: ZAP Active Scan (attack mode, per-endpoint)
-  - [x] Stage: Publish ZAP Report (HTML Publisher plugin + CSP fix)
+  - [ ] Replace old ZAP quick/baseline scan flow with ZAP Automation Scan
+  - [ ] Stage: ZAP Automation Scan (`zap.bat -cmd -autorun zap\zap-automation.yaml`)
+  - [ ] ZAP Automation imports OpenAPI before Active Scan
+  - [ ] Stage: Publish ZAP Report (`zap-automation-report.html` + HTML Publisher + CSP fix)
   - [x] Stage: Stop Backend (find & kill Java process on port 8080)
   - [x] `post` block: always/success/failure handlers
 - **Deliverable:** [STAGE4_AUDIT.md](file:///c:/Users/nandu/OneDrive/Desktop/DAST/STAGE4_AUDIT.md)
@@ -144,13 +145,15 @@ Update ProjectV1.md to mark the stage complete.
 
 - [ ] Create `/zap/zap-automation.yaml`
   - [ ] `env` section: target URLs, context
-  - [ ] `jobs` section: spider, activeScan, report
-  - [ ] Rules: 40018 (SQLi), 40012/40014 (XSS)
+  - [ ] `jobs` section: openapi, passiveScan-wait, optional spider, activeScan, report
+  - [ ] OpenAPI import replaces manual endpoint discovery in ZAP
+  - [ ] Report job writes `zap-automation-report.html` for Jenkins publishing
+  - [ ] Rules: prioritize 40018 (SQLi), 40012/40014 (XSS)
 - [ ] Create `/zap_testing_guide.md`
   - [ ] DAST vs SAST analogy
   - [ ] Manual ZAP workflow documentation
   - [ ] What ZAP finds in THIS app (with controller references)
-  - [ ] How Jenkinsfile automates each manual step
+  - [ ] How Jenkins automates manual discovery through OpenAPI import
   - [ ] How to read ZAP alert severity levels
 
 **Files to create:**
