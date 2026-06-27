@@ -81,16 +81,13 @@ echo Checkout complete.
         // Run tests separately so Jenkins can publish a test report.
         stage('Test Backend') {
             steps {
-                // Explain that test failures should be visible but should not hide DAST behavior.
+                // Explain that test failures should stop the pipeline.
                 echo 'Stage 3: running backend tests and publishing JUnit XML.'
 
-                // catchError marks this stage unstable instead of stopping the whole lab workflow.
-                catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
-                    // Run the Gradle test task inside the backend folder.
-                    dir('backend') {
-                        // The test task writes XML files under build/test-results/test.
-                        bat '.\\gradlew.bat test'
-                    }
+                // Run the Gradle test task inside the backend folder.
+                dir('backend') {
+                    // The test task writes XML files under build/test-results/test.
+                    bat '.\\gradlew.bat test'
                 }
             }
 
@@ -162,6 +159,15 @@ if not exist "%ZAP_PLAN%" (
   exit /b 1
 )
 
+REM Confirm the configured ZAP launcher exists before trying to scan.
+if not exist "%ZAP_PATH%\\zap.bat" (
+  echo ERROR: ZAP launcher not found at %ZAP_PATH%\\zap.bat.
+  exit /b 1
+)
+
+REM Remove any old report so a failed ZAP run cannot pass by finding stale output.
+if exist "%REPORT_DIR%\\zap-automation-report.html" del /f /q "%REPORT_DIR%\\zap-automation-report.html"
+
 REM Run ZAP headlessly with the Automation Framework plan.
 REM -cmd means no GUI, -addonupdate updates ZAP rules, -autorun executes YAML.
 call "%ZAP_PATH%\\zap.bat" -cmd -addonupdate -autorun "%ZAP_PLAN%"
@@ -170,7 +176,13 @@ REM Store ZAP's exit code so we can decide whether to fail the stage.
 set ZAP_EXIT=%ERRORLEVEL%
 echo ZAP exited with code %ZAP_EXIT%.
 
-REM ZAP may return 1 when vulnerabilities are found; in this learning lab, findings are expected.
+REM A successful ZAP run must create the expected report.
+if not exist "%REPORT_DIR%\\zap-automation-report.html" (
+  echo ERROR: ZAP did not create %REPORT_DIR%\\zap-automation-report.html.
+  exit /b 1
+)
+
+REM ZAP may return 1 when findings cross a warning threshold; in this lab, findings are expected.
 if %ZAP_EXIT% LEQ 1 exit /b 0
 
 REM Exit codes above 1 usually mean ZAP itself failed to run.
@@ -257,10 +269,9 @@ exit /b 0
             echo 'Pipeline completed successfully. Open the ZAP Automation Report tab for findings.'
         }
 
-        // Print a short failure message with the first places to investigate.
+        // Print the requested failure message when any stage fails.
         failure {
-            // Most failures are startup, path, or ZAP installation issues.
-            echo 'Pipeline failed. Check backend_log.txt, ZAP_PATH, and the console output above.'
+            echo 'Pipeline Failed'
         }
     }
 }
